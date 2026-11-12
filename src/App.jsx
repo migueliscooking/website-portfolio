@@ -1,36 +1,76 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useRef, useState } from 'react';
+import * as Tone from 'tone';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [freq, setFreq] = useState(440);
+  const synthRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (synthRef.current) {
+        synthRef.current.dispose();
+        synthRef.current = null;
+      }
+    };
+  }, []);
+
+  const toggleNote = async () => {
+    await Tone.start();
+    await Tone.getContext().resume();
+
+    if (!synthRef.current) {
+      synthRef.current = new Tone.Synth({
+        oscillator: { type: 'sawtooth' },
+        envelope: {
+          attack: 0.05,
+          decay: 0.2,
+          sustain: 0.8,
+          release: 0.3,
+        },
+      }).toDestination();
+    }
+
+    if (!isPlaying) {
+      synthRef.current.triggerAttack(freq);
+      setIsPlaying(true);
+    } else {
+      synthRef.current.triggerRelease();
+      setIsPlaying(false);
+    }
+  };
+
+  const handleFreqChange = (e) => {
+    const nextFreq = Number(e.target.value);
+    setFreq(nextFreq);
+    if (synthRef.current) {
+      synthRef.current.frequency.value = nextFreq;
+    }
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => (count + 1) * 2)}
-        >
-          Count is {count}
-        </button>
-      </section>
-    </>
-  )
+    <section id="center">
+      <h1>Tone.js Synth</h1>
+
+      <button type="button" onClick={toggleNote}>
+        {isPlaying ? 'Stop Tone' : 'Play Tone'}
+      </button>
+
+      <div style={{ marginTop: '1rem' }}>
+        <label>
+          Frequency: {freq} Hz
+          <input
+            type="range"
+            min="110"
+            max="880"
+            value={freq}
+            onChange={handleFreqChange}
+          />
+        </label>
+      </div>
+    </section>
+  );
 }
 
-export default App
+export default App;
